@@ -1,0 +1,56 @@
+# Plain settings go in a ConfigMap. Change the URL without rebuilding the image.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-config
+  namespace: brewbar
+data:
+  MENU_URL: http://menu-service   # Kubernetes DNS resolves this to the menu Service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: brewbar
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+        - name: order
+          image: brewbar/order-service:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: order-config
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits:   { cpu: 250m, memory: 128Mi }
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8000 }
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8000 }
+---
+# NodePort exposes order-service outside the cluster on port 30080 of every node.
+# (On kind/Docker Desktop, `kubectl port-forward` is simpler. See README.)
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: brewbar
+spec:
+  type: NodePort
+  selector:
+    app: order-service
+  ports:
+    - port: 80
+      targetPort: 8000
+      nodePort: 30080

@@ -1,0 +1,17 @@
+# STEP 1 of the k8s demo: the smallest unit, a single Pod.
+# Delete it and it's gone for good. Nothing brings it back.
+# That is why real workloads use a Deployment (02-menu-service.yaml).
+apiVersion: v1
+kind: Pod
+metadata:
+  name: menu-solo
+  namespace: brewbar
+  labels:
+    app: menu-solo
+spec:
+  containers:
+    - name: menu
+      image: brewbar/menu-service:1.0
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 8000

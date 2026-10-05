@@ -1,0 +1,5 @@
+# A namespace groups everything for this demo; `kubectl delete ns brewbar` cleans it all up.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: brewbar

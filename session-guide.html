@@ -1,0 +1,1351 @@
+<title>Building REST APIs and Cloud Integration with Kubernetes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: presenter run-sheet. Proportional timeline up top, sticky segment rail on the left,
+   each segment a section with Say / Show / Demo cues. Code panels stay dark in both themes. */
+:root {
+  --bg: #F2F4F6;
+  --surface: #FFFFFF;
+  --ink: #111921;
+  --ink-2: #4B5967;
+  --ink-3: #74828F;
+  --line: #D8DEE4;
+  --accent: #2C44C9;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #E4E8FA;
+  --mth-ink: #FFFFFF;
+  --loc-path: #2C44C9;
+  --loc-query: #0B7F86;
+  --loc-body: #A9670F;
+  --loc-header: #7A44B5;
+
+  /* HTTP method colors follow the Swagger UI convention */
+  --get: #2463C6;
+  --post: #15805A;
+  --put: #A9670F;
+  --patch: #0B7F86;
+  --delete: #C2362F;
+  --ok: #15805A;
+  --warn: #A9670F;
+  --bad: #C2362F;
+
+  --code-bg: #0E151C;
+  --code-line: #1F2A35;
+  --code-ink: #D5DEE6;
+  --code-dim: #6E7F8F;
+  --code-key: #8FB3FF;
+  --code-str: #9FD8A8;
+  --code-num: #F2B97A;
+  --code-kw: #E79AD5;
+  --code-fn: #7FD6E0;
+
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --step--1: 0.8125rem;
+  --step-0: 1rem;
+  --step-1: 1.1875rem;
+  --step-2: 1.5rem;
+  --step-3: 2.125rem;
+  --step-4: clamp(2.25rem, 4.6vw, 3.5rem);
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0D1217; --surface: #141B22; --ink: #E5EBF0; --ink-2: #A3B0BC; --ink-3: #7A8895;
+    --line: #26313B; --accent: #8D9CFF; --accent-ink: #0D1217; --accent-soft: #1D2452; --mth-ink: #0D1217; --loc-path: #8D9CFF; --loc-query: #4FC4C9; --loc-body: #E3A955; --loc-header: #C49AF0;
+    --get: #74A6F7; --post: #5CC596; --put: #E3A955; --patch: #4FC4C9; --delete: #F07C74;
+    --ok: #5CC596; --warn: #E3A955; --bad: #F07C74;
+    --code-bg: #090E13; --code-line: #1C2630;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0D1217; --surface: #141B22; --ink: #E5EBF0; --ink-2: #A3B0BC; --ink-3: #7A8895;
+  --line: #26313B; --accent: #8D9CFF; --accent-ink: #0D1217; --accent-soft: #1D2452; --mth-ink: #0D1217; --loc-path: #8D9CFF; --loc-query: #4FC4C9; --loc-body: #E3A955; --loc-header: #C49AF0;
+  --get: #74A6F7; --post: #5CC596; --put: #E3A955; --patch: #4FC4C9; --delete: #F07C74;
+  --ok: #5CC596; --warn: #E3A955; --bad: #F07C74;
+  --code-bg: #090E13; --code-line: #1C2630;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: var(--step-0);
+  line-height: 1.6;
+  padding-inline: clamp(16px, 4vw, 48px);
+}
+h1, h2, h3, h4 { font-family: var(--f-display); text-wrap: balance; line-height: 1.12; margin: 0; }
+h2 { font-size: var(--step-3); font-weight: 800; letter-spacing: -0.015em; }
+h3 { font-size: var(--step-2); font-weight: 700; letter-spacing: -0.01em; margin-top: 2.25rem; }
+h4 { font-size: var(--step-1); font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+code { font-family: var(--f-mono); font-size: 0.88em; background: var(--accent-soft); padding: 0.1em 0.35em; border-radius: 4px; }
+.mono { font-family: var(--f-mono); }
+.label {
+  font-family: var(--f-mono); font-size: var(--step--1); text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--ink-3);
+}
+
+/* ---------- hero ---------- */
+.hero {
+  max-width: 1240px; margin-inline: auto; padding-block: 48px 32px;
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 40px; align-items: start;
+}
+.hero h1 { font-size: var(--step-4); font-weight: 800; letter-spacing: -0.025em; margin-top: 12px; }
+.hero .lede { margin-top: 18px; font-size: var(--step-1); color: var(--ink-2); }
+.hero .meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 20px; color: var(--ink-2); font-size: 0.95rem; }
+.hero .meta span b { color: var(--ink); font-weight: 600; }
+
+.exchange { background: var(--code-bg); color: var(--code-ink); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--code-line); }
+.exchange-head { display: flex; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--code-line); font-family: var(--f-mono); font-size: 0.75rem; color: var(--code-dim); }
+.exchange pre { margin: 0; padding: 14px 16px; font-family: var(--f-mono); font-size: 0.8125rem; line-height: 1.6; overflow-x: auto; }
+.exchange .dir { color: var(--code-dim); }
+.exchange .m { color: var(--code-key); font-weight: 600; }
+.exchange .s { color: var(--code-str); font-weight: 600; }
+.exchange .h { color: var(--code-dim); }
+.exchange .hv { color: var(--code-num); }
+.exchange-foot { padding: 10px 16px 14px; font-size: 0.82rem; color: var(--code-dim); border-top: 1px solid var(--code-line); }
+
+/* ---------- run bar ---------- */
+.runsheet { max-width: 1240px; margin-inline: auto; padding-block: 8px 28px; }
+.runsheet-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--surface); }
+.toggle button {
+  font: 600 0.85rem var(--f-body); color: var(--ink-2); background: transparent; border: 0;
+  padding: 6px 14px; border-radius: 999px; cursor: pointer;
+}
+.toggle button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.runbar { display: flex; gap: 3px; height: 54px; }
+.runbar a {
+  flex: var(--min) 1 0; min-width: 0; text-decoration: none; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 6px 8px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden;
+  transition: flex-grow .35s ease, border-color .15s;
+}
+.runbar a:hover { border-color: var(--accent); }
+.runbar a .t { font-family: var(--f-mono); font-size: 0.7rem; color: var(--ink-3); white-space: nowrap; }
+.runbar a .n { font-size: 0.8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.runbar a.core { background: var(--accent-soft); border-color: transparent; }
+.runbar-axis { display: flex; justify-content: space-between; font-family: var(--f-mono); font-size: 0.7rem; color: var(--ink-3); margin-top: 6px; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .runbar a { transition: none; } }
+
+/* ---------- layout ---------- */
+.layout { max-width: 1240px; margin-inline: auto; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; padding-block: 8px 80px; }
+.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; }
+.toc ol { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 2px; }
+.toc a {
+  display: grid; grid-template-columns: 3.4rem 1fr; gap: 6px; padding: 7px 10px; border-radius: 6px;
+  text-decoration: none; color: var(--ink-2); font-size: 0.9rem; line-height: 1.3;
+}
+.toc a .t { font-family: var(--f-mono); font-size: 0.74rem; color: var(--ink-3); padding-top: 2px; font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--surface); color: var(--ink); }
+.toc a.active { background: var(--surface); color: var(--ink); box-shadow: inset 2px 0 0 var(--accent); }
+.toc .files { margin-top: 28px; padding: 14px; border: 1px dashed var(--line); border-radius: var(--radius); font-size: 0.82rem; color: var(--ink-2); }
+.toc .files pre { margin: 8px 0 0; font-family: var(--f-mono); font-size: 0.72rem; line-height: 1.55; color: var(--ink); white-space: pre; overflow-x: auto; }
+
+main { min-width: 0; display: grid; gap: 72px; }
+section { display: grid; gap: 18px; min-width: 0; }
+.sec-head { display: grid; gap: 10px; padding-top: 22px; border-top: 2px solid var(--ink); }
+.sec-head .row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; }
+.time {
+  font-family: var(--f-mono); font-size: 0.8rem; font-weight: 600; color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.goal { color: var(--ink-2); font-size: var(--step-1); max-width: 62ch; }
+
+/* presenter cues */
+.cue { display: grid; grid-template-columns: 4.2rem 1fr; gap: 12px; align-items: baseline; padding: 12px 14px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); }
+.cue > b { font-family: var(--f-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+.cue.demo > b { color: var(--post); }
+.cue p + p { margin-top: 6px; }
+.cues { display: grid; gap: 8px; }
+
+ul.points { margin: 0; padding-left: 1.2rem; display: grid; gap: 6px; max-width: 68ch; }
+ul.points li::marker { color: var(--ink-3); }
+
+/* method chips */
+.mth { display: inline-block; font-family: var(--f-mono); font-size: 0.72rem; font-weight: 600; padding: 2px 7px; border-radius: 4px; color: var(--mth-ink); letter-spacing: 0.02em; min-width: 4.2em; text-align: center; }
+.mth.GET { background: var(--get); } .mth.POST { background: var(--post); } .mth.PUT { background: var(--put); }
+.mth.PATCH { background: var(--patch); } .mth.DELETE { background: var(--delete); }
+
+/* tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--f-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-3); font-weight: 600; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.yes { color: var(--ok); font-weight: 600; } td.no { color: var(--ink-3); }
+td .mono, td code { white-space: nowrap; }
+.bad-url { color: var(--bad); text-decoration: line-through; text-decoration-thickness: 1px; }
+.good-url { color: var(--ok); }
+
+/* code */
+.code { background: var(--code-bg); border-radius: var(--radius); border: 1px solid var(--code-line); overflow: hidden; min-width: 0; }
+.code .file { display: flex; justify-content: space-between; gap: 12px; font-family: var(--f-mono); font-size: 0.74rem; color: var(--code-dim); padding: 8px 14px; border-bottom: 1px solid var(--code-line); }
+.code pre { margin: 0; padding: 14px 16px; overflow-x: auto; font-family: var(--f-mono); font-size: 0.8125rem; line-height: 1.6; color: var(--code-ink); tab-size: 4; }
+.code pre code { background: none; padding: 0; font-size: inherit; color: inherit; border-radius: 0; }
+.token.comment, .token.prolog { color: var(--code-dim); font-style: italic; }
+.token.string, .token.attr-value, .token.char { color: var(--code-str); }
+.token.number, .token.boolean, .token.constant { color: var(--code-num); }
+.token.keyword, .token.important, .token.atrule { color: var(--code-kw); }
+.token.function, .token.class-name, .token.decorator { color: var(--code-fn); }
+.token.key, .token.property, .token.attr-name, .token.header-name, .token.request-line .token.method { color: var(--code-key); }
+.token.punctuation, .token.operator { color: #9AA9B7; }
+.token.builtin { color: var(--code-num); }
+
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+
+/* status code board */
+.codes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.codes .col { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; display: grid; gap: 10px; align-content: start; }
+.codes .col h4 { display: flex; justify-content: space-between; align-items: baseline; }
+.codes .col h4 small { font-family: var(--f-body); font-size: 0.8rem; font-weight: 500; color: var(--ink-3); }
+.codes dl { margin: 0; display: grid; gap: 8px; }
+.codes dl div { display: grid; grid-template-columns: 2.6rem 1fr; gap: 10px; }
+.codes dt { font-family: var(--f-mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+.codes dd { margin: 0; font-size: 0.88rem; color: var(--ink-2); }
+.codes dd b { color: var(--ink); font-weight: 600; }
+.codes .c2 dt { color: var(--ok); } .codes .c4 dt { color: var(--warn); } .codes .c5 dt { color: var(--bad); }
+
+/* explorer */
+.explorer { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+.explorer-tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px; border-bottom: 1px solid var(--line); }
+.explorer-tabs button {
+  display: inline-flex; gap: 8px; align-items: center; font: 500 0.82rem var(--f-mono); color: var(--ink-2);
+  background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px 5px 5px; cursor: pointer;
+}
+.explorer-tabs button:hover { border-color: var(--ink-3); color: var(--ink); }
+.explorer-tabs button[aria-selected="true"] { border-color: var(--ink); color: var(--ink); background: var(--bg); }
+.explorer-tabs .mth { min-width: 3.6em; font-size: 0.66rem; }
+.explorer-note { padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; border-bottom: 1px solid var(--line); }
+.explorer-note p { flex: 1 1 320px; font-size: 0.93rem; }
+.pill { font-family: var(--f-mono); font-size: 0.7rem; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-3); white-space: nowrap; }
+.pill.on { border-color: transparent; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.explorer-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.explorer-body .code { border-radius: 0; border: 0; }
+.explorer-body .code + .code { border-left: 1px solid var(--code-line); }
+.explorer-body pre { min-height: 15.5rem; }
+
+/* flow chips */
+.flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 0.85rem; }
+.flow span { padding: 6px 10px; border-radius: 6px; background: var(--surface); border: 1px solid var(--line); white-space: nowrap; }
+.flow span.fail { border-style: dashed; color: var(--ink-2); }
+.flow i { color: var(--ink-3); font-style: normal; }
+
+/* step list (real sequence) */
+.steps { counter-reset: s; display: grid; gap: 28px; }
+.step { display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); gap: 14px; }
+.step::before {
+  counter-increment: s; content: counter(s);
+  font-family: var(--f-display); font-weight: 800; font-size: 1.1rem; width: 2.2rem; height: 2.2rem;
+  display: grid; place-items: center; border-radius: 50%; border: 2px solid var(--ink); color: var(--ink);
+}
+.step > div { display: grid; gap: 10px; min-width: 0; }
+
+/* glossary */
+.glossary { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.term { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; display: grid; gap: 6px; align-content: start; }
+.term h4 { font-size: 1.05rem; }
+.term p { font-size: 0.9rem; color: var(--ink-2); }
+.term .eg { font-family: var(--f-mono); font-size: 0.74rem; color: var(--accent); }
+
+/* diagrams */
+figure { margin: 0; }
+.diagram { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; overflow-x: auto; }
+.diagram svg { display: block; width: 100%; min-width: 640px; height: auto; }
+figcaption { font-size: 0.85rem; color: var(--ink-3); margin-top: 8px; }
+svg .box { fill: var(--surface); stroke: var(--ink); stroke-width: 1.5; }
+svg .box.soft { fill: var(--accent-soft); stroke: var(--accent); }
+svg .box.ghost { fill: var(--bg); stroke: var(--ink-3); stroke-dasharray: 5 4; }
+svg .kind { font: 600 10px var(--f-mono); fill: var(--ink-3); letter-spacing: 0.08em; text-transform: uppercase; }
+svg .name { font: 700 14px var(--f-display); fill: var(--ink); }
+svg .sub { font: 400 11px var(--f-mono); fill: var(--ink-2); }
+svg .edge { stroke: var(--ink-2); stroke-width: 1.5; fill: none; }
+svg .edge.dash { stroke-dasharray: 5 4; }
+svg .edge.acc { stroke: var(--accent); stroke-width: 2; }
+svg .arrowhead { fill: var(--ink-2); }
+svg .arrowhead.acc { fill: var(--accent); }
+svg .num circle { fill: var(--accent); }
+svg .num text { font: 700 11px var(--f-mono); fill: var(--accent-ink); }
+svg .boundary { fill: none; stroke: var(--ink-3); stroke-width: 1.2; stroke-dasharray: 2 4; }
+svg .note { font: 400 11px var(--f-body); fill: var(--ink-3); }
+
+ol.path { margin: 0; padding-left: 1.4rem; display: grid; gap: 6px; max-width: 70ch; }
+ol.path li::marker { font-family: var(--f-mono); font-weight: 600; color: var(--accent); }
+
+.checklist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; margin: 0; padding: 0; list-style: none; }
+.checklist li { display: grid; grid-template-columns: 1.2rem 1fr; gap: 8px; font-size: 0.93rem; }
+.checklist li::before { content: ""; width: 0.9rem; height: 0.9rem; margin-top: 0.3rem; border: 1.5px solid var(--ink-3); border-radius: 3px; }
+
+.next { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+
+/* where-does-it-go section */
+.anatomy { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow-x: auto; }
+.anatomy pre { margin: 0; padding: 18px 20px; font-family: var(--f-mono); font-size: 0.95rem; line-height: 1.9; color: var(--ink-2); }
+.anatomy .verb { color: var(--ink); font-weight: 600; }
+.anatomy .loc { font-weight: 600; padding: 1px 4px; border-radius: 4px; border-bottom: 2px solid currentColor; }
+.loc.path, .loc-card.path { --c: var(--loc-path); } .loc.query, .loc-card.query { --c: var(--loc-query); }
+.loc.body, .loc-card.body { --c: var(--loc-body); } .loc.header, .loc-card.header { --c: var(--loc-header); }
+.anatomy .loc { color: var(--c); }
+.locs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.loc-card { background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--c); border-radius: var(--radius); padding: 14px; display: grid; gap: 6px; align-content: start; }
+.loc-card .where { font-family: var(--f-mono); font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--c); }
+.loc-card p { font-size: 0.9rem; color: var(--ink-2); }
+.loc-card .eg { font-family: var(--f-mono); font-size: 0.72rem; color: var(--ink-3); }
+.quiz { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.quiz details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
+.quiz summary { cursor: pointer; font-weight: 600; }
+.quiz summary::marker { color: var(--accent); }
+.quiz details p { margin-top: 10px; font-size: 0.92rem; color: var(--ink-2); }
+.quiz details p .mono { color: var(--ink); }
+@media (max-width: 1000px) { .locs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .locs, .quiz { grid-template-columns: 1fr; } }
+
+footer { max-width: 1240px; margin-inline: auto; padding-block: 24px 48px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 0.85rem; }
+
+@media (max-width: 1000px) {
+  .hero { grid-template-columns: 1fr; padding-block: 32px 24px; }
+  .layout { grid-template-columns: 1fr; }
+  .toc { display: none; }
+}
+@media (max-width: 760px) {
+  .two, .three, .codes, .explorer-body, .checklist { grid-template-columns: 1fr; }
+  .explorer-body .code + .code { border-left: 0; border-top: 1px solid var(--code-line); }
+  .explorer-body pre { min-height: 0; }
+  .runbar { height: auto; flex-wrap: wrap; }
+  .runbar a { flex: 1 1 40%; }
+  .cue { grid-template-columns: 1fr; gap: 4px; }
+  main { gap: 56px; }
+}
+</style>
+
+<header class="hero">
+  <div>
+    <span class="label">Session run-sheet · presenter notes · 60–90 min</span>
+    <h1>Building REST APIs and Cloud Integration with Kubernetes</h1>
+    <p class="lede">From "what is a REST API" to two FastAPI services finding each other inside a Kubernetes cluster. One toy coffee shop, <b>Brew Bar</b>, carries every example from the first slide to the last demo.</p>
+    <div class="meta">
+      <span><b>menu-service</b> owns the menu, full CRUD</span>
+      <span><b>order-service</b> calls menu over HTTP</span>
+      <span>Code: <code>brewbar/</code></span>
+    </div>
+  </div>
+  <div class="exchange" aria-label="An HTTP exchange from inside the cluster">
+    <div class="exchange-head"><span>order-service pod → menu-service</span><span>the whole session in one call</span></div>
+<pre><span class="dir">→</span> <span class="m">GET</span> /menu/2 HTTP/1.1
+  <span class="h">Host:</span> <span class="hv">menu-service</span>
+  <span class="h">Accept:</span> application/json
+
+<span class="dir">←</span> HTTP/1.1 <span class="s">200 OK</span>
+  <span class="h">content-type:</span> application/json
+  <span class="h">x-served-by:</span> <span class="hv">menu-service-7d9f8-x2kqp</span>
+
+  {"id": 2, "name": "Flat White",
+   "category": "espresso", "price_cents": 450,
+   "available": true}</pre>
+    <div class="exchange-foot">A resource (<code>/menu/2</code>), a verb (<code>GET</code>), a status code, a FastAPI handler, a container, and a Kubernetes Service name doing DNS. By the end of the session everyone can explain each line.</div>
+  </div>
+</header>
+
+<div class="runsheet">
+  <div class="runsheet-top">
+    <span class="label">Timeline, drawn to scale</span>
+    <div class="toggle" role="group" aria-label="Session length">
+      <button type="button" id="len-90" data-len="90" aria-pressed="true">90 min</button>
+      <button type="button" id="len-60" data-len="60" aria-pressed="false">60 min cut</button>
+    </div>
+  </div>
+  <nav class="runbar" id="runbar" aria-label="Session timeline"></nav>
+  <div class="runbar-axis"><span>0:00</span><span id="axis-mid">0:45</span><span id="axis-end">1:30</span></div>
+</div>
+
+<div class="layout">
+  <aside class="toc" aria-label="Sections">
+    <span class="label">Segments</span>
+    <ol id="toc"></ol>
+    <div class="files">
+      <span class="label">Toy service</span>
+<pre>brewbar/
+├─ menu-service/
+│  ├─ app/main.py
+│  ├─ Dockerfile
+│  └─ requirements.txt
+├─ order-service/
+│  └─ (same shape)
+├─ k8s/
+│  ├─ 00-namespace.yaml
+│  ├─ 01-bare-pod.yaml
+│  ├─ 02-menu-service.yaml
+│  └─ 03-order-service.yaml
+├─ demo.sh
+└─ README.md</pre>
+    </div>
+  </aside>
+
+  <main>
+
+<!-- ============================== 0. Before ============================== -->
+<section id="prep" aria-labelledby="prep-h">
+  <div class="sec-head">
+    <div class="row"><span class="time">Before the session</span></div>
+    <h2 id="prep-h">Set up so the demos can't fail</h2>
+  </div>
+  <ul class="checklist">
+    <li><span>Cluster is up: <code>kubectl get nodes</code> shows <code>Ready</code> (Docker Desktop, kind or minikube).</span></li>
+    <li><span>Both images built and loaded into the cluster (README, Part 3).</span></li>
+    <li><span>Ports 8001 and 8002 are free on your laptop.</span></li>
+    <li><span><code>curlimages/curl</code> pulled ahead of time for the DNS demo.</span></li>
+    <li><span>Two terminals open: one running commands, one with <code>kubectl get pods -w</code>.</span></li>
+    <li><span>Browser tab on <code>localhost:8001/docs</code>, editor on <code>menu-service/app/main.py</code>.</span></li>
+  </ul>
+</section>
+
+<!-- ============================== 1. Intro ============================== -->
+<section id="intro" aria-labelledby="intro-h">
+  <div class="sec-head">
+    <div class="row"><span class="time" data-time="intro"></span><span class="label">Opening</span></div>
+    <h2 id="intro-h">Why APIs, and the shop we'll build</h2>
+    <p class="goal">Everyone leaves knowing what we will have running by the end and why each layer exists.</p>
+  </div>
+  <div class="cues">
+    <div class="cue"><b>Say</b><div><p>An API is a contract: "send me this, I promise to answer with that." The caller doesn't care what language or database sits behind it.</p><p>A web API puts that contract on HTTP, so anything that can make an HTTP request can use it: a browser, a phone, <code>curl</code>, or another service.</p></div></div>
+    <div class="cue"><b>Show</b><div><p>The exchange at the top of this page. Promise that by the end every line will make sense.</p></div></div>
+    <div class="cue"><b>Say</b><div><p>Brew Bar has two services. <b>menu-service</b> knows drinks and prices. <b>order-service</b> takes orders and asks menu-service for the price. Two services, two owners, one HTTP contract between them.</p></div></div>
+  </div>
+</section>
+
+<!-- ============================== 2. REST ============================== -->
+<section id="rest" aria-labelledby="rest-h">
+  <div class="sec-head">
+    <div class="row"><span class="time" data-time="rest"></span><span class="label">Fundamentals</span></div>
+    <h2 id="rest-h">What REST actually means</h2>
+    <p class="goal">REST is a style for designing HTTP APIs around <em>resources</em>. Get the nouns, verbs and status codes right and most design questions answer themselves.</p>
+  </div>
+
+  <div class="cues">
+    <div class="cue"><b>Say</b><div><p>REST (Roy Fielding, 2000) is a set of constraints, not a library. Four of them matter day to day:</p></div></div>
+  </div>
+  <div class="two">
+    <div class="term"><h4>Resources have URLs</h4><p>Everything is a noun with an address. <code>/menu</code> is the collection, <code>/menu/2</code> is one item.</p></div>
+    <div class="term"><h4>A uniform interface</h4><p>You act on resources with the same few HTTP methods everywhere. No custom verbs in URLs.</p></div>
+    <div class="term"><h4>Representations</h4><p>You never touch the resource itself, you exchange a representation of it, usually JSON.</p></div>
+    <div class="term"><h4>Stateless</h4><p>Each request carries everything needed to serve it (including auth). Any server copy can answer it. Hold onto this one: it is what makes scaling on Kubernetes trivial.</p></div>
+  </div>
+
+  <h3>Nouns in the URL, verbs in the method</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Instead of</th><th>Write</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><span class="mono bad-url">POST /createOrder</span></td><td><span class="mth POST">POST</span> <span class="mono good-url">/orders</span></td><td>The method already says "create".</td></tr>
+      <tr><td><span class="mono bad-url">GET /getMenuItem?id=2</span></td><td><span class="mth GET">GET</span> <span class="mono good-url">/menu/2</span></td><td>Identity goes in the path. Query params are for filtering.</td></tr>
+      <tr><td><span class="mono bad-url">GET /menu/2/delete</span></td><td><span class="mth DELETE">DELETE</span> <span class="mono good-url">/menu/2</span></td><td>GET must never change data. Crawlers and caches will call it.</td></tr>
+      <tr><td><span class="mono bad-url">GET /espressoDrinks</span></td><td><span class="mth GET">GET</span> <span class="mono good-url">/menu?category=espresso</span></td><td>One collection, filtered, not a URL per filter.</td></tr>
+      <tr><td><span class="mono bad-url">GET /orderItemsFor/42</span></td><td><span class="mth GET">GET</span> <span class="mono good-url">/orders/42/items</span></td><td>Nesting shows ownership. Stop at two levels.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>The methods, and the two properties that matter</h3>
+  <p><b>Safe</b> means it changes nothing on the server. <b>Idempotent</b> means sending it once or ten times leaves the server in the same state, so a client can retry it after a timeout without fear.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Method</th><th>Does</th><th>Safe</th><th>Idempotent</th><th>Brew Bar success</th></tr></thead>
+    <tbody>
+      <tr><td><span class="mth GET">GET</span></td><td>Read a resource or collection</td><td class="yes">yes</td><td class="yes">yes</td><td><span class="mono">200 OK</span></td></tr>
+      <tr><td><span class="mth POST">POST</span></td><td>Create a new resource; server picks the id</td><td class="no">no</td><td class="no">no</td><td><span class="mono">201 Created</span> + <span class="mono">Location</span></td></tr>
+      <tr><td><span class="mth PUT">PUT</span></td><td>Replace the whole resource</td><td class="no">no</td><td class="yes">yes</td><td><span class="mono">200 OK</span></td></tr>
+      <tr><td><span class="mth PATCH">PATCH</span></td><td>Change some fields</td><td class="no">no</td><td class="no">not guaranteed</td><td><span class="mono">200 OK</span></td></tr>
+      <tr><td><span class="mth DELETE">DELETE</span></td><td>Remove the resource</td><td class="no">no</td><td class="yes">yes</td><td><span class="mono">204 No Content</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Try every verb against Brew Bar</h3>
+  <p>Real requests and responses captured from <code>menu-service</code>. Click through them in order during the talk, or run <code>./demo.sh</code> live.</p>
+  <div class="explorer">
+    <div class="explorer-tabs" role="tablist" aria-label="Example requests" id="ex-tabs"></div>
+    <div class="explorer-note"><p id="ex-note"></p><span class="pill" id="ex-safe">safe</span><span class="pill" id="ex-idem">idempotent</span></div>
+    <div class="explorer-body" role="tabpanel" id="ex-panel">
+      <div class="code"><div class="file"><span>request</span><span id="ex-curl-label">curl</span></div><pre><code class="language-http" id="ex-req"></code></pre></div>
+      <div class="code"><div class="file"><span>response</span><span id="ex-status"></span></div><pre><code class="language-http" id="ex-res"></code></pre></div>
+    </div>
+  </div>
+
+  <h3>Status codes: who should fix it?</h3>
+  <p>The first digit tells the caller what to do next. 2xx: done. 4xx: <em>your</em> request is wrong, don't retry it unchanged. 5xx: <em>we</em> failed, try again later.</p>
+  <div class="codes">
+    <div class="col c2"><h4>2xx <small>success</small></h4><dl>
+      <div><dt>200</dt><dd><b>OK.</b> GET, PUT, PATCH worked.</dd></div>
+      <div><dt>201</dt><dd><b>Created.</b> <code>POST /menu</code>, with a <code>Location</code> header.</dd></div>
+      <div><dt>204</dt><dd><b>No Content.</b> <code>DELETE /menu/8</code>. Empty body.</dd></div>
+    </dl></div>
+    <div class="col c4"><h4>4xx <small>caller's fault</small></h4><dl>
+      <div><dt>401</dt><dd><b>Unauthorized.</b> No <code>X-API-Key</code> header. "Who are you?"</dd></div>
+      <div><dt>403</dt><dd><b>Forbidden.</b> Wrong key. "I know who you are, and no."</dd></div>
+      <div><dt>404</dt><dd><b>Not Found.</b> <code>GET /menu/999</code>.</dd></div>
+      <div><dt>409</dt><dd><b>Conflict.</b> Duplicate name, or ordering a sold-out item.</dd></div>
+      <div><dt>422</dt><dd><b>Unprocessable.</b> Body failed validation. FastAPI does this for free.</dd></div>
+    </dl></div>
+    <div class="col c5"><h4>5xx <small>server's fault</small></h4><dl>
+      <div><dt>500</dt><dd><b>Internal error.</b> An unhandled exception. Never send it on purpose.</dd></div>
+      <div><dt>502</dt><dd><b>Bad Gateway.</b> menu-service answered something order-service didn't expect.</dd></div>
+      <div><dt>503</dt><dd><b>Unavailable.</b> menu-service unreachable, or a pod failing readiness.</dd></div>
+      <div><dt>504</dt><dd><b>Gateway Timeout.</b> menu-service took longer than 2 s.</dd></div>
+    </dl></div>
+  </div>
+</section>
+
+<!-- ============================== 2b. Path, query or body ============================== -->
+<section id="params" aria-labelledby="params-h">
+  <div class="sec-head">
+    <div class="row"><span class="time" data-time="params"></span><span class="label">Design</span></div>
+    <h2 id="params-h">Path, query or body?</h2>
+    <p class="goal">Every piece of data in a request has one right place. Each place answers a different question.</p>
+  </div>
+
+  <h3>One request, all four places</h3>
+  <p>This is a real Brew Bar call: preview a price change on the Flat White without saving it.</p>
+  <div class="anatomy" aria-label="Annotated request">
+<pre><span class="verb">PATCH</span> /menu/<span class="loc path">2</span>?<span class="loc query">dry_run=true</span> HTTP/1.1
+Host: localhost:8001
+<span class="loc header">X-API-Key: barista-secret</span>
+Content-Type: application/json
+
+<span class="loc body">{"price_cents": 400}</span></pre>
+  </div>
+  <div class="locs">
+    <div class="loc-card path"><span class="where">Path</span><h4>Which resource?</h4><p><code>2</code> is the item you're acting on. Change it and you're talking about a different thing.</p><span class="eg">required · identity</span></div>
+    <div class="loc-card query"><span class="where">Query</span><h4>How should I read or handle it?</h4><p><code>dry_run=true</code> changes how the server processes the request, not which item or what data.</p><span class="eg">optional · has a default</span></div>
+    <div class="loc-card body"><span class="where">Body</span><h4>What are you sending?</h4><p><code>{"price_cents": 400}</code> is the new data. It can be large, nested and structured.</p><span class="eg">the payload · POST, PUT, PATCH</span></div>
+    <div class="loc-card header"><span class="where">Header</span><h4>What's true about this request?</h4><p>Who is asking (API key, token), what format, which version. Not about the resource itself.</p><span class="eg">credentials · metadata</span></div>
+  </div>
+
+  <h3>Three questions, in this order</h3>
+  <ol class="path">
+    <li><b>Does it say <em>which</em> resource I mean?</b> Put it in the <b>path</b>: <code>/menu/7</code>, <code>/orders/42/items</code>. Path parts are required; a URL without them points at something else.</li>
+    <li><b>Is it the data I'm creating or changing?</b> Put it in the <b>body</b>: a new menu item, the fields of a PATCH, the contents of an order.</li>
+    <li><b>Does it filter, sort, paginate, or switch an option, and could it be left out?</b> Put it in the <b>query</b>: <code>?category=espresso&amp;limit=10</code>, <code>?dry_run=true</code>.</li>
+  </ol>
+  <p>Anything secret, or about the request rather than the resource, goes in a <b>header</b>.</p>
+
+  <h3>Worked examples</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>You want to</th><th>Do this</th><th>Not this</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Get the Flat White</td><td><span class="mth GET">GET</span> <span class="mono good-url">/menu/2</span></td><td><span class="mono bad-url">/menu?id=2</span></td><td>It names one item, so it's identity. <code>?id=2</code> reads as "filter the list", and returns a list.</td></tr>
+      <tr><td>List espresso drinks under $4.50</td><td><span class="mth GET">GET</span> <span class="mono good-url">/menu?category=espresso&amp;max_price_cents=450</span></td><td><span class="mono bad-url">/menu/espresso/450</span></td><td>Filters are optional and combine in any order. In the path, every filter becomes required and the order becomes arbitrary.</td></tr>
+      <tr><td>Show page 2, ten per page</td><td><span class="mth GET">GET</span> <span class="mono good-url">/menu?limit=10&amp;offset=10</span></td><td><span class="mono bad-url">/menu/page/2</span></td><td>A page isn't a resource. It's a view of the collection.</td></tr>
+      <tr><td>Add a Mocha to the menu</td><td><span class="mth POST">POST</span> <span class="mono good-url">/menu</span><br>body <span class="mono">{"name":"Mocha", …}</span></td><td><span class="mono bad-url">/menu?name=Mocha&amp;price_cents=520</span></td><td>It's data you're creating. URLs end up in logs, have length limits, and can't hold nested objects.</td></tr>
+      <tr><td>Mark the croissant sold out</td><td><span class="mth PATCH">PATCH</span> <span class="mono good-url">/menu/7</span><br>body <span class="mono">{"available":false}</span></td><td><span class="mono bad-url">/menu/7?available=false</span></td><td>Which item: path. The new value: body. A query string is for reading options, not new state.</td></tr>
+      <tr><td>Order 2 Flat Whites</td><td><span class="mth POST">POST</span> <span class="mono good-url">/orders</span><br>body <span class="mono">{"item_id":2,"quantity":2}</span></td><td><span class="mono bad-url">/orders/2</span></td><td><code>item_id</code> is an id, but it isn't the resource you're acting on. You're creating an order; the item is part of its data.</td></tr>
+      <tr><td>Add a line to order 42</td><td><span class="mth POST">POST</span> <span class="mono good-url">/orders/42/items</span><br>body <span class="mono">{"item_id":2}</span></td><td><span class="mono bad-url">/orders/items</span> + <span class="mono">{"order_id":42}</span></td><td>Order 42 is the parent you're adding to, so it's in the path. The new line's contents go in the body.</td></tr>
+      <tr><td>Authenticate</td><td>header <span class="mono good-url">X-API-Key: …</span></td><td><span class="mono bad-url">/menu?api_key=…</span></td><td>URLs are saved in browser history, server logs and proxy logs. Secrets never go in them.</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="cues">
+    <div class="cue"><b>Say</b><div><p>The trap people fall into: "it's an id, so it goes in the path." An id goes in the path only when it addresses the thing you're acting on. In <code>POST /orders</code> the <code>item_id</code> is just data about the new order.</p></div></div>
+    <div class="cue"><b>Say</b><div><p>Quick test for query vs path: if the URL still makes sense with the parameter removed, it's a query parameter. <code>/menu</code> without <code>?category=</code> is still the menu. <code>/menu/</code> without <code>7</code> is a different resource.</p></div></div>
+  </div>
+
+  <h3>How FastAPI decides where to look</h3>
+  <p>You don't annotate each argument with "path" or "query". FastAPI reads the function signature:</p>
+  <div class="two">
+    <div class="code"><div class="file"><span>PATCH /menu/{item_id}</span><span>menu-service/app/main.py</span></div><pre><code class="language-python">@app.patch("/menu/{item_id}", response_model=MenuItem)
+def patch_item(
+    item_id: int,                    # named in the path template → PATH
+    body: MenuItemPatch,             # a Pydantic model           → BODY
+    x_api_key: Annotated[str, Header()],  # explicit Header()     → HEADER
+    dry_run: bool = False,           # plain type, not in path    → QUERY
+):
+    ...</code></pre></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Parameter is…</th><th>FastAPI reads it from</th></tr></thead>
+      <tbody>
+        <tr><td>Named in the route, <code>{item_id}</code></td><td><b>Path</b>, always required</td></tr>
+        <tr><td>A Pydantic model</td><td><b>Body</b> (JSON)</td></tr>
+        <tr><td><code>int</code>, <code>str</code>, <code>bool</code>, enum, not in the route</td><td><b>Query</b>; required unless it has a default</td></tr>
+        <tr><td>Wrapped in <code>Header()</code> or <code>Cookie()</code></td><td>That header or cookie</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <p>The real <code>patch_item</code> gets <code>item_id</code> through the <code>get_item_or_404</code> dependency and the key through <code>require_barista</code>, but the rules are the same. Validation errors even tell you which place they checked:</p>
+  <div class="code"><div class="file"><span>terminal</span></div><pre><code class="language-bash">curl -X PATCH 'localhost:8001/menu/2?dry_run=maybe' -H 'X-API-Key: barista-secret' \
+     -H 'Content-Type: application/json' -d '{"price_cents": 400}'
+# 422 {"detail":[{"loc":["query","dry_run"],"msg":"Input should be a valid boolean", ...}]}
+#                         ^^^^^ where FastAPI looked</code></pre></div>
+
+  <h3>Gotchas</h3>
+  <ul class="points">
+    <li><b>There's no optional path parameter.</b> If a value can be left out, it belongs in the query.</li>
+    <li><b>Don't send a body with GET.</b> Many proxies and clients drop it. For a search too complex for a query string, use <code>POST /orders/search</code> with a body.</li>
+    <li><b>Keep the query string short.</b> Browsers and servers cap URLs at roughly 2–8 KB. Big or nested data goes in a body.</li>
+    <li><b>Query values are always strings on the wire.</b> <code>?dry_run=true</code> arrives as text; FastAPI's type hint turns it into a <code>bool</code> for you.</li>
+  </ul>
+
+  <h3>Quick quiz for the room</h3>
+  <div class="quiz">
+    <details><summary>Show only available pastries, cheapest first</summary><p><span class="mth GET">GET</span> <span class="mono">/menu?category=pastry&amp;available=true&amp;sort=price_cents</span>. All three are optional ways of viewing the collection.</p></details>
+    <details><summary>Rename item 3 to "Gibraltar"</summary><p><span class="mth PATCH">PATCH</span> <span class="mono">/menu/3</span> with body <span class="mono">{"name":"Gibraltar"}</span>. Which item: path. New value: body.</p></details>
+    <details><summary>Get order 42's receipt as a PDF</summary><p><span class="mth GET">GET</span> <span class="mono">/orders/42/receipt?format=pdf</span>, or the <span class="mono">Accept: application/pdf</span> header. Order 42 is identity; the format is how you want to read it.</p></details>
+    <details><summary>Preview a price change on item 5 without saving</summary><p><span class="mth PATCH">PATCH</span> <span class="mono">/menu/5?dry_run=true</span> with body <span class="mono">{"price_cents":420}</span>. This is the anatomy example; run it live.</p></details>
+  </div>
+</section>
+
+<!-- ============================== 3. Alternatives ============================== -->
+<section id="alt" aria-labelledby="alt-h">
+  <div class="sec-head">
+    <div class="row"><span class="time" data-time="alt"></span><span class="label">Context</span></div>
+    <h2 id="alt-h">Alternatives, in five minutes</h2>
+    <p class="goal">REST is the default, not the only option. Know when the others win.</p>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Style</th><th>Shape</th><th>Wire format</th><th>Pick it when</th><th>Cost</th></tr></thead>
+    <tbody>
+      <tr><td><b>REST</b></td><td>Resources + HTTP verbs</td><td>HTTP/1.1 or 2, JSON</td><td>Public APIs, CRUD, anything <code>curl</code> and browsers should hit</td><td>Over- or under-fetching; several round trips for related data</td></tr>
+      <tr><td><b>GraphQL</b></td><td>Client sends a query naming exactly the fields it wants</td><td>One <code>POST /graphql</code>, JSON</td><td>Many clients (web, iOS, Android) needing different slices of the same data</td><td>HTTP caching gets harder; one query can be very expensive</td></tr>
+      <tr><td><b>gRPC</b></td><td>Call typed remote functions</td><td>HTTP/2, Protobuf (binary)</td><td>Internal service-to-service traffic, low latency, streaming</td><td>Not browser-native; needs <code>.proto</code> files and code generation</td></tr>
+      <tr><td><b>WebSocket / SSE</b></td><td>A long-lived connection the server can push on</td><td>WS frames or <code>text/event-stream</code></td><td>Live order status, chat, dashboards</td><td>Stateful connections are harder to load-balance and scale</td></tr>
+      <tr><td><b>SOAP</b></td><td>XML envelopes described by a WSDL</td><td>HTTP, XML</td><td>Integrating with existing banking and enterprise systems</td><td>Verbose; rarely chosen for new work</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Same question, three ways</h3>
+  <div class="three">
+    <div class="code"><div class="file"><span>REST</span></div><pre><code class="language-http">GET /menu/2 HTTP/1.1
+Host: menu-service</code></pre></div>
+    <div class="code"><div class="file"><span>GraphQL</span></div><pre><code class="language-graphql">query {
+  menuItem(id: 2) {
+    name
+    priceCents
+  }
+}</code></pre></div>
+    <div class="code"><div class="file"><span>gRPC (.proto)</span></div><pre><code class="language-protobuf">service Menu {
+  rpc GetItem (ItemRequest)
+      returns (MenuItem);
+}</code></pre></div>
+  </div>
+</section>
+
+<!-- ============================== 4. FastAPI ============================== -->
+<section id="fastapi" aria-labelledby="fastapi-h">
+  <div class="sec-head">
+    <div class="row"><span class="time" data-time="fastapi"></span><span class="label">Build</span></div>
+    <h2 id="fastapi-h">Building menu-service with FastAPI</h2>
+    <p class="goal">Write type hints, get validation, JSON serialization and interactive docs without extra code.</p>
+  </div>
+  <div class="cues">
+    <div class="cue"><b>Say</b><div><p>FastAPI is a Python web framework built on two libraries: <b>Starlette</b> (the HTTP plumbing, async) and <b>Pydantic</b> (data validation from type hints). <b>Uvicorn</b> is the server process that runs it.</p></div></div>
+  </div>
+
+  <h3>Hello, world</h3>
+  <div class="two">
+    <div class="code"><div class="file"><span>main.py</span></div><pre><code class="language-python">from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/hello/{name}")
+def hello(name: str, excited: bool = False):
+    return {"message": f"Hello {name}" + ("!" if excited else ".")}</code></pre></div>
+    <div class="code"><div class="file"><span>terminal</span></div><pre><code class="language-bash">pip install "fastapi[standard]"
+uvicorn main:app --reload
+
+curl "localhost:8000/hello/Asha?excited=true"
+# {"message":"Hello Asha!"}
+
+curl "localhost:8000/hello/Asha?excited=maybe"
+# 422: Input should be a valid boolean</code></pre></div>
+  </div>
+  <ul class="points">
+    <li><code>{name}</code> in the path becomes the <code>name</code> argument: a <b>path parameter</b>.</li>
+    <li><code>excited</code> isn't in the path, so it's a <b>query parameter</b>. Its type hint means <code>"maybe"</code> is rejected before your code runs.</li>
+    <li>Return a dict, get JSON. Open <code>/docs</code>: the docs were generated from those same hints.</li>
+  </ul>
+
+  <h3>What happens to every request</h3>
+  <div class="flow" aria-label="Request lifecycle">
+    <span>HTTP request</span><i>→</i><span>middleware</span><i>→</i><span>route match</span><i>→</i><span>dependencies</span><i>→</i><span>validate body &amp; params</span><i>→</i><span>your function</span><i>→</i><span>response_model filter</span><i>→</i><span>JSON</span>
+  </div>
+  <div class="flow" aria-label="Where errors come from">
+    <span class="fail">no route → 404</span><span class="fail">dependency raises → 401 / 403 / 404</span><span class="fail">validation fails → 422</span><span class="fail">you raise HTTPException → any code</span>
+  </div>
+
+  <h3>Brew Bar, built up in six steps</h3>
+  <p>All excerpts are from <code>brewbar/menu-service/app/main.py</code>. Each route there has a <code>LESSON</code> comment; scroll the file live as you go.</p>
+  <div class="steps">
+    <div class="step"><div>
+      <h4>Model the resource</h4>
+      <p>Separate what clients <em>send</em> from what the server <em>returns</em>. The server owns <code>id</code> and <code>updated_at</code>, so clients can't set them.</p>
+      <div class="code"><div class="file"><span>models</span><span>main.py</span></div><pre><code class="language-python">class Category(str, Enum):
+    espresso = "espresso"
+    brew = "brew"
+    tea = "tea"
+    pastry = "pastry"
+
+class MenuItemIn(BaseModel):                     # request body
+    name: str = Field(min_length=2, max_length=40)
+    category: Category
+    price_cents: int = Field(gt=0, le=2000)      # money as integer cents
+    available: bool = True
+
+class MenuItem(MenuItemIn):                      # response body
+    id: int
+    updated_at: datetime</code></pre></div>
+    </div></div>
+
+    <div class="step"><div>
+      <h4>Read a collection, with filters and pagination</h4>
+      <p>Optional query params with defaults. <code>Query(le=50)</code> caps page size so nobody asks for a million rows.</p>
+      <div class="code"><div class="file"><span>GET /menu</span><span>main.py</span></div><pre><code class="language-python">@app.get("/menu", response_model=Page, tags=["menu"])
+def list_items(
+    category: Category | None = None,
+    available: bool | None = None,
+    max_price_cents: Annotated[int | None, Query(gt=0)] = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 10,
+    offset: Annotated[int, Query(ge=0)] = 0,
+):
+    items = list(DB.values())
+    if category is not None:
+        items = [i for i in items if i.category == category]
+    if max_price_cents is not None:
+        items = [i for i in items if i.price_cents &lt;= max_price_cents]
+    return Page(items=items[offset : offset + limit], total=len(items),
+                limit=limit, offset=offset)</code></pre></div>
+    </div></div>
+
+    <div class="step"><div>
+      <h4>Read one, with a reusable 404</h4>
+      <p>A <b>dependency</b> is a function FastAPI calls before your handler. Write the lookup once; GET, PUT, PATCH and DELETE all reuse it.</p>
+      <div class="code"><div class="file"><span>dependency</span><span>main.py</span></div><pre><code class="language-python">def get_item_or_404(item_id: Annotated[int, Path(ge=1)]) -> MenuItem:
+    item = DB.get(item_id)
+    if item is None:
+        raise HTTPException(404, detail=f"Menu item {item_id} not found")
+    return item
+
+@app.get("/menu/{item_id}", response_model=MenuItem)
+def get_item(item: Annotated[MenuItem, Depends(get_item_or_404)]):
+    return item</code></pre></div>
+    </div></div>
+
+    <div class="step"><div>
+      <h4>Create: 201, Location, and 409</h4>
+      <p>POST isn't idempotent, so a retried request could create duplicates. We guard on name and answer <code>409 Conflict</code>.</p>
+      <div class="code"><div class="file"><span>POST /menu</span><span>main.py</span></div><pre><code class="language-python">@app.post("/menu", response_model=MenuItem, status_code=201,
+          dependencies=[Depends(require_barista)])
+def create_item(body: MenuItemIn, response: Response):
+    if any(i.name.lower() == body.name.lower() for i in DB.values()):
+        raise HTTPException(409, detail=f"'{body.name}' is already on the menu")
+    item = MenuItem(id=next_id(), updated_at=now(), **body.model_dump())
+    DB[item.id] = item
+    response.headers["Location"] = f"/menu/{item.id}"
+    return item</code></pre></div>
+    </div></div>
+
+    <div class="step"><div>
+      <h4>Update: PUT replaces, PATCH merges</h4>
+      <p>PUT takes the full <code>MenuItemIn</code>. PATCH takes a model where every field is optional; <code>exclude_unset=True</code> tells "not sent" apart from "sent as null".</p>
+      <div class="code"><div class="file"><span>PATCH /menu/{id}</span><span>main.py</span></div><pre><code class="language-python">class MenuItemPatch(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=40)
+    category: Category | None = None
+    price_cents: int | None = Field(default=None, gt=0, le=2000)
+    available: bool | None = None
+
+@app.patch("/menu/{item_id}", response_model=MenuItem,
+           dependencies=[Depends(require_barista)])
+def patch_item(body: MenuItemPatch,
+               item: Annotated[MenuItem, Depends(get_item_or_404)]):
+    changes = body.model_dump(exclude_unset=True)   # {"available": False}
+    updated = item.model_copy(update={**changes, "updated_at": now()})
+    DB[item.id] = updated
+    return updated</code></pre></div>
+    </div></div>
+
+    <div class="step"><div>
+      <h4>Guard writes with a dependency</h4>
+      <p>Same dependency mechanism, now for auth. Declaring it with <code>APIKeyHeader</code> also adds an <b>Authorize</b> button to <code>/docs</code>.</p>
+      <div class="code"><div class="file"><span>auth</span><span>main.py</span></div><pre><code class="language-python">api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+def require_barista(key: Annotated[str | None, Depends(api_key_header)]):
+    if key is None:
+        raise HTTPException(401, detail="Missing X-API-Key header")
+    if key != API_KEY:               # read from env → a k8s Secret later
+        raise HTTPException(403, detail="Wrong API key")</code></pre></div>
+    </div></div>
+  </div>
+
+  <div class="cues">
+    <div class="cue demo"><b>Demo</b><div><p>Start both services, open <code>localhost:8001/docs</code>, then run <code>./demo.sh</code>. It pauses before each call so you can explain the status code before the audience sees it.</p></div></div>
+    <div class="cue"><b>Ask</b><div><p>"What should <code>DELETE /menu/8</code> return the second time?" (404, and the server state is unchanged: DELETE is still idempotent.)</p></div></div>
+  </div>
+</section>
+
+<!-- ============================== 5. Containers ============================== -->
+<section id="docker" aria-labelledby="docker-h">
+  <div class="sec-head">
+    <div class="row"><span class="time" data-time="docker"></span><span class="label">Package</span></div>
+    <h2 id="docker-h">Into a container</h2>
+    <p class="goal">Kubernetes doesn't run Python files. It runs container images. Make one.</p>
+  </div>
+  <div class="two">
+    <div class="term"><h4>Image</h4><p>A read-only, versioned bundle: OS libraries, Python, your dependencies, your code, and the start command.</p><span class="eg">brewbar/menu-service:1.0</span></div>
+    <div class="term"><h4>Container</h4><p>A running process started from an image, isolated from its neighbours. Many containers can run from one image.</p><span class="eg">docker run brewbar/menu-service:1.0</span></div>
+  </div>
+  <div class="two">
+    <div class="code"><div class="file"><span>Dockerfile</span><span>menu-service/</span></div><pre><code class="language-docker">FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /srv
+
+# deps first: this layer is cached until
+# requirements.txt changes
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app ./app
+
+# never run as root
+RUN useradd --uid 10001 --no-create-home appuser
+USER 10001
+
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]</code></pre></div>
+    <div class="code"><div class="file"><span>terminal</span></div><pre><code class="language-bash">docker build -t brewbar/menu-service:1.0  menu-service
+docker build -t brewbar/order-service:1.0 order-service
+
+docker images | grep brewbar
+
+# run it: host port 8001 → container port 8000
+docker run --rm -p 8001:8000 brewbar/menu-service:1.0
+
+curl -i localhost:8001/whoami
+# x-served-by: 3f2a9c1d7e0b   ← the container id</code></pre></div>
+  </div>
+  <ul class="points">
+    <li><code>--host 0.0.0.0</code> is the classic first bug. Uvicorn's default <code>127.0.0.1</code> only accepts connections from inside the container.</li>
+    <li><code>PYTHONUNBUFFERED=1</code> sends logs straight to stdout, which is where <code>kubectl logs</code> reads them.</li>
+    <li>The hostname inside a container is its id. Inside Kubernetes it becomes the pod name, which is how <code>X-Served-By</code> will show load balancing.</li>
+  </ul>
+</section>
+
+<!-- ============================== 6. Kubernetes ============================== -->
+<section id="k8s" aria-labelledby="k8s-h">
+  <div class="sec-head">
+    <div class="row"><span class="time" data-time="k8s"></span><span class="label">Deploy</span></div>
+    <h2 id="k8s-h">Running it on Kubernetes</h2>
+    <p class="goal">You describe the state you want in YAML. Kubernetes keeps making reality match it.</p>
+  </div>
+  <div class="glossary">
+    <div class="term"><h4>Cluster · Node</h4><p>A set of machines (nodes) that Kubernetes schedules work onto.</p><span class="eg">kubectl get nodes</span></div>
+    <div class="term"><h4>Pod</h4><p>The smallest unit: one or more containers sharing an IP address. Pods are disposable.</p><span class="eg">menu-service-7d9f8-x2kqp</span></div>
+    <div class="term"><h4>Deployment</h4><p>"Keep N copies of this pod running." Replaces dead pods and rolls out new versions.</p><span class="eg">replicas: 2</span></div>
+    <div class="term"><h4>Service</h4><p>A stable name and virtual IP in front of a changing set of pods, picked by label.</p><span class="eg">http://menu-service</span></div>
+    <div class="term"><h4>ConfigMap · Secret</h4><p>Configuration injected as env vars or files, so one image works in every environment.</p><span class="eg">MENU_URL, API_KEY</span></div>
+    <div class="term"><h4>Namespace</h4><p>A folder for resources. Names only need to be unique inside one.</p><span class="eg">brewbar</span></div>
+  </div>
+
+  <h3>Step A: one bare pod</h3>
+  <div class="two">
+    <div class="code"><div class="file"><span>k8s/01-bare-pod.yaml</span></div><pre><code class="language-yaml">apiVersion: v1
+kind: Pod
+metadata:
+  name: menu-solo
+  namespace: brewbar
+  labels:
+    app: menu-solo
+spec:
+  containers:
+    - name: menu
+      image: brewbar/menu-service:1.0
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 8000</code></pre></div>
+    <div class="code"><div class="file"><span>terminal</span></div><pre><code class="language-bash">kubectl apply -f k8s/00-namespace.yaml
+kubectl config set-context --current --namespace=brewbar
+
+kubectl apply -f k8s/01-bare-pod.yaml
+kubectl get pods -o wide        # note the pod IP
+kubectl logs menu-solo
+
+kubectl port-forward pod/menu-solo 8001:8000
+curl localhost:8001/menu
+
+kubectl delete pod menu-solo
+kubectl get pods                # gone. nobody restarts it.</code></pre></div>
+  </div>
+  <div class="cues"><div class="cue"><b>Say</b><div><p>A bare pod is like running the container by hand on someone else's machine. If it dies, it stays dead. That's why nobody deploys bare pods.</p></div></div></div>
+
+  <h3>Step B: a Deployment and a Service</h3>
+  <div class="code"><div class="file"><span>k8s/02-menu-service.yaml (excerpt)</span></div><pre><code class="language-yaml">apiVersion: apps/v1
+kind: Deployment
+metadata: { name: menu-service, namespace: brewbar }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: menu-service }   # "I own pods with this label"
+  template:                              # the pod blueprint
+    metadata:
+      labels: { app: menu-service }
+    spec:
+      containers:
+        - name: menu
+          image: brewbar/menu-service:1.0
+          ports: [{ containerPort: 8000 }]
+          envFrom: [{ secretRef: { name: menu-api-key } }]
+          livenessProbe:  { httpGet: { path: /healthz, port: 8000 } }
+          readinessProbe: { httpGet: { path: /readyz,  port: 8000 } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: menu-service, namespace: brewbar }
+spec:
+  type: ClusterIP
+  selector: { app: menu-service }        # traffic goes to pods with this label
+  ports: [{ port: 80, targetPort: 8000 }]</code></pre></div>
+
+  <figure>
+    <div class="diagram">
+      <svg viewBox="0 0 760 344" role="img" aria-labelledby="d1-title">
+        <title id="d1-title">A Deployment creates a ReplicaSet that runs two pods; a Service selects those pods by label and receives traffic from order-service.</title>
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker>
+          <marker id="ah-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead acc" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+        <!-- deployment -->
+        <rect class="box" x="90" y="16" width="240" height="58" rx="8"/>
+        <text class="kind" x="106" y="38">Deployment</text>
+        <text class="name" x="106" y="60">menu-service · replicas: 2</text>
+        <path class="edge" d="M210 74 V 112" marker-end="url(#ah)"/>
+        <text class="note" x="218" y="98">creates</text>
+        <!-- replicaset -->
+        <rect class="box" x="90" y="114" width="240" height="58" rx="8"/>
+        <text class="kind" x="106" y="136">ReplicaSet</text>
+        <text class="name" x="106" y="158">menu-service-7d9f8</text>
+        <path class="edge" d="M170 172 L 112 218" marker-end="url(#ah)"/>
+        <path class="edge" d="M250 172 L 302 218" marker-end="url(#ah)"/>
+        <!-- pods -->
+        <rect class="box" x="20" y="220" width="185" height="78" rx="8"/>
+        <text class="kind" x="34" y="241">Pod · app=menu-service</text>
+        <text class="name" x="34" y="263">…-x2kqp</text>
+        <text class="sub" x="34" y="284">10.244.1.7:8000</text>
+        <rect class="box" x="215" y="220" width="185" height="78" rx="8"/>
+        <text class="kind" x="229" y="241">Pod · app=menu-service</text>
+        <text class="name" x="229" y="263">…-r8m4t</text>
+        <text class="sub" x="229" y="284">10.244.2.3:8000</text>
+        <!-- caller -->
+        <rect class="box ghost" x="490" y="16" width="250" height="58" rx="8"/>
+        <text class="kind" x="506" y="38">Caller · order-service pod</text>
+        <text class="sub" x="506" y="60">GET http://menu-service/menu/2</text>
+        <path class="edge acc" d="M615 74 V 112" marker-end="url(#ah-acc)"/>
+        <!-- service -->
+        <rect class="box soft" x="490" y="114" width="250" height="58" rx="8"/>
+        <text class="kind" x="506" y="136">Service · ClusterIP</text>
+        <text class="name" x="506" y="158">menu-service → 10.96.12.40:80</text>
+        <!-- selector bus -->
+        <path class="edge dash acc" d="M615 172 V 322 H 112 V 302" marker-end="url(#ah-acc)"/>
+        <path class="edge dash acc" d="M307 322 V 302" marker-end="url(#ah-acc)"/>
+        <text class="note" x="330" y="338">selector app=menu-service, port 80 → 8000</text>
+      </svg>
+    </div>
+    <figcaption>The Deployment never talks to the Service. They only share a label. Delete a pod and a new one with the same label appears; the Service picks it up automatically.</figcaption>
+  </figure>
+
+  <h3>Probes: restart it, or just stop sending traffic?</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Probe</th><th>Brew Bar path</th><th>Question it answers</th><th>On failure</th></tr></thead>
+    <tbody>
+      <tr><td><b>Liveness</b></td><td><span class="mono">/healthz</span></td><td>Is the process stuck or dead?</td><td>Kubernetes <b>restarts</b> the container</td></tr>
+      <tr><td><b>Readiness</b></td><td><span class="mono">/readyz</span></td><td>Should this pod receive requests right now?</td><td>Pod is <b>removed from the Service</b>, keeps running</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>kubectl you'll use on stage</h3>
+  <div class="code"><div class="file"><span>cheat sheet</span></div><pre><code class="language-bash">kubectl apply -f k8s/02-menu-service.yaml -f k8s/03-order-service.yaml
+kubectl get deploy,pods,svc,endpoints          # the whole picture
+kubectl describe pod &lt;name&gt;                    # events: image pulls, probe failures
+kubectl logs -l app=menu-service -f            # logs from every menu pod
+kubectl exec -it deploy/menu-service -- sh     # a shell inside a pod
+kubectl scale deploy/menu-service --replicas=4
+kubectl rollout restart deploy/menu-service    # rolling restart, zero downtime</code></pre></div>
+</section>
+
+<!-- ============================== 7. Service to service ============================== -->
+<section id="s2s" aria-labelledby="s2s-h">
+  <div class="sec-head">
+    <div class="row"><span class="time" data-time="s2s"></span><span class="label">Integrate</span></div>
+    <h2 id="s2s-h">How services find and call each other</h2>
+    <p class="goal">order-service never knows a pod IP. It knows a name, and Kubernetes DNS plus the Service do the rest.</p>
+  </div>
+
+  <figure>
+    <div class="diagram">
+      <svg viewBox="0 0 820 290" role="img" aria-labelledby="d2-title">
+        <title id="d2-title">Request path from a laptop through order-service, a DNS lookup, the menu-service Service, to one of two menu pods.</title>
+        <defs>
+          <marker id="bh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker>
+          <marker id="bh-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead acc" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+        <!-- cluster boundary -->
+        <rect class="boundary" x="170" y="6" width="644" height="278" rx="12"/>
+        <text class="kind" x="186" y="274">cluster · namespace brewbar</text>
+        <!-- laptop -->
+        <rect class="box ghost" x="6" y="140" width="140" height="64" rx="8"/>
+        <text class="kind" x="18" y="162">Your laptop</text>
+        <text class="sub" x="18" y="184">curl :8002/orders</text>
+        <!-- order pod -->
+        <rect class="box" x="190" y="130" width="208" height="84" rx="8"/>
+        <text class="kind" x="204" y="152">Pod · order-service</text>
+        <text class="name" x="204" y="174">POST /orders</text>
+        <text class="sub" x="204" y="196">MENU_URL=http://menu-service</text>
+        <!-- dns -->
+        <rect class="box" x="300" y="22" width="220" height="56" rx="8"/>
+        <text class="kind" x="316" y="44">CoreDNS</text>
+        <text class="sub" x="316" y="64">menu-service → 10.96.12.40</text>
+        <!-- service -->
+        <rect class="box soft" x="440" y="140" width="170" height="64" rx="8"/>
+        <text class="kind" x="454" y="162">Service · ClusterIP</text>
+        <text class="name" x="454" y="186">menu-service:80</text>
+        <!-- menu pods -->
+        <rect class="box" x="650" y="92" width="156" height="64" rx="8"/>
+        <text class="kind" x="664" y="114">Pod · menu · ready</text>
+        <text class="sub" x="664" y="136">…-x2kqp :8000</text>
+        <rect class="box" x="650" y="188" width="156" height="64" rx="8"/>
+        <text class="kind" x="664" y="210">Pod · menu · ready</text>
+        <text class="sub" x="664" y="232">…-r8m4t :8000</text>
+        <!-- edges -->
+        <path class="edge acc" d="M146 172 H 188" marker-end="url(#bh-acc)"/>
+        <path class="edge" d="M300 130 L 352 80" marker-start="url(#bh)" marker-end="url(#bh)"/>
+        <path class="edge acc" d="M398 172 H 438" marker-end="url(#bh-acc)"/>
+        <path class="edge acc" d="M610 162 L 648 130" marker-end="url(#bh-acc)"/>
+        <path class="edge dash" d="M610 184 L 648 216" marker-end="url(#bh)"/>
+        <!-- step numbers -->
+        <g class="num"><circle cx="167" cy="152" r="10"/><text x="167" y="156" text-anchor="middle">1</text></g>
+        <g class="num"><circle cx="308" cy="98" r="10"/><text x="308" y="102" text-anchor="middle">2</text></g>
+        <g class="num"><circle cx="418" cy="152" r="10"/><text x="418" y="156" text-anchor="middle">3</text></g>
+        <g class="num"><circle cx="622" cy="132" r="10"/><text x="622" y="136" text-anchor="middle">4</text></g>
+        <text class="note" x="520" y="240">next call may go here</text>
+      </svg>
+    </div>
+  </figure>
+  <ol class="path">
+    <li><code>kubectl port-forward svc/order-service 8002:80</code> tunnels your request into an order pod.</li>
+    <li>The order pod's httpx client resolves <code>menu-service</code>. CoreDNS answers with the Service's stable virtual IP.</li>
+    <li>The request goes to that IP on port 80. Pods never change it, even as pods come and go.</li>
+    <li>kube-proxy forwards to one <em>ready</em> menu pod on port 8000. The response's <code>X-Served-By</code> header names which one; order-service saves it as <code>priced_by_pod</code>.</li>
+  </ol>
+
+  <h3>DNS names a pod can use</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Name</th><th>Works from</th></tr></thead>
+    <tbody>
+      <tr><td><span class="mono">menu-service</span></td><td>Pods in the same namespace (what Brew Bar uses)</td></tr>
+      <tr><td><span class="mono">menu-service.brewbar</span></td><td>Pods in any namespace</td></tr>
+      <tr><td><span class="mono">menu-service.brewbar.svc.cluster.local</span></td><td>Anywhere in the cluster, fully qualified</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Configure the URL, don't hard-code it</h3>
+  <div class="two">
+    <div class="code"><div class="file"><span>k8s/03-order-service.yaml</span></div><pre><code class="language-yaml">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-config
+  namespace: brewbar
+data:
+  MENU_URL: http://menu-service
+---
+# in the Deployment's container spec:
+envFrom:
+  - configMapRef:
+      name: order-config</code></pre></div>
+    <div class="code"><div class="file"><span>order-service/app/main.py</span></div><pre><code class="language-python">MENU_URL = os.getenv("MENU_URL", "http://localhost:8001")
+
+# one client per process: connection pooling + a timeout policy
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.menu = httpx.AsyncClient(
+        base_url=MENU_URL, timeout=httpx.Timeout(2.0))
+    yield
+    await app.state.menu.aclose()</code></pre></div>
+  </div>
+  <p>Same image, three environments: <code>localhost:8001</code> on your laptop, <code>http://menu-service</code> in the cluster, something else in production. Only the ConfigMap changes.</p>
+
+  <h3>Calling another service honestly</h3>
+  <p>The network will fail. Decide up front what each failure means for <em>your</em> caller.</p>
+  <div class="code"><div class="file"><span>POST /orders</span><span>order-service/app/main.py</span></div><pre><code class="language-python">try:
+    r = await menu.get(f"/menu/{body.item_id}")
+except httpx.TimeoutException:
+    raise HTTPException(504, detail="menu-service timed out")
+except httpx.RequestError as exc:
+    raise HTTPException(503, detail=f"menu-service unreachable: {exc!r}")
+
+if r.status_code == 404:
+    raise HTTPException(422, detail=f"No menu item with id {body.item_id}")
+if r.status_code != 200:
+    raise HTTPException(502, detail=f"menu-service answered {r.status_code}")
+
+item = r.json()
+if not item["available"]:
+    raise HTTPException(409, detail=f"{item['name']} is sold out")</code></pre></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>menu-service says</th><th>order-service answers</th><th>Meaning for the customer</th></tr></thead>
+    <tbody>
+      <tr><td><span class="mono">200</span>, available</td><td><span class="mono">201 Created</span></td><td>Order placed</td></tr>
+      <tr><td><span class="mono">200</span>, sold out</td><td><span class="mono">409 Conflict</span></td><td>Pick something else</td></tr>
+      <tr><td><span class="mono">404</span></td><td><span class="mono">422 Unprocessable</span></td><td>Your order names an item that doesn't exist</td></tr>
+      <tr><td>no answer in 2 s</td><td><span class="mono">504 Gateway Timeout</span></td><td>Try again shortly</td></tr>
+      <tr><td>connection refused</td><td><span class="mono">503 Unavailable</span></td><td>Try again shortly</td></tr>
+    </tbody>
+  </table></div>
+  <div class="cues"><div class="cue"><b>Say</b><div><p>Never pass a downstream 404 straight through. To the customer, "menu item not found" and "your order was not found" are very different problems.</p></div></div></div>
+
+  <h3>Getting traffic in from outside</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Service type</th><th>Reachable from</th><th>Typical use</th></tr></thead>
+    <tbody>
+      <tr><td><b>ClusterIP</b></td><td>Inside the cluster only</td><td>menu-service: nobody outside needs it</td></tr>
+      <tr><td><b>NodePort</b></td><td>Every node's IP on a fixed port (30000–32767)</td><td>order-service on <code>:30080</code> for local clusters</td></tr>
+      <tr><td><b>LoadBalancer</b></td><td>A cloud load balancer with a public IP</td><td>Production on EKS, GKE, AKS</td></tr>
+      <tr><td><b>Ingress</b> (not a Service type)</td><td>One entry point routing by host and path</td><td><code>/orders</code> → order-service, <code>/menu</code> → menu-service</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Live demo moments</h3>
+  <div class="cues">
+    <div class="cue demo"><b>Demo</b><div><p><b>Load balancing.</b> Place five orders; <code>priced_by_pod</code> alternates between the two menu pods.</p></div></div>
+    <div class="cue demo"><b>Demo</b><div><p><b>Discovery is DNS.</b> <code>kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- sh</code>, then <code>nslookup menu-service</code> and <code>curl http://menu-service/whoami</code>.</p></div></div>
+    <div class="cue demo"><b>Demo</b><div><p><b>Self-healing.</b> With <code>kubectl get pods -w</code> running, <code>kubectl delete pod -l app=menu-service</code>. New pods appear within seconds; orders keep working.</p></div></div>
+    <div class="cue demo"><b>Demo</b><div><p><b>Readiness.</b> Watch <code>kubectl get endpoints menu-service -w</code>, then call <code>POST /admin/toggle-ready</code> inside one pod (README has the one-liner). Its IP leaves the list; the pod keeps running.</p></div></div>
+    <div class="cue demo"><b>Demo</b><div><p><b>The planned bug.</b> POST a new item through one menu pod, then order it repeatedly. Some orders fail with 422: the other pod has never heard of it. Each pod keeps its own in-memory dict. This is why REST services stay stateless and keep data in a database outside the pods.</p></div></div>
+  </div>
+</section>
+
+<!-- ============================== 8. Wrap ============================== -->
+<section id="wrap" aria-labelledby="wrap-h">
+  <div class="sec-head">
+    <div class="row"><span class="time" data-time="wrap"></span><span class="label">Close</span></div>
+    <h2 id="wrap-h">Recap and questions</h2>
+  </div>
+  <ul class="points">
+    <li><b>REST</b>: resources in URLs, verbs in methods, meaning in status codes. Safe and idempotent decide what a client may retry.</li>
+    <li><b>Where data goes</b>: path says which resource, body carries what you send, query tunes how you read it, headers say who's asking.</li>
+    <li><b>FastAPI</b>: type hints give you validation (422), serialization and <code>/docs</code>. Dependencies reuse lookups and auth.</li>
+    <li><b>Containers</b>: one immutable image, configured by environment variables, listening on <code>0.0.0.0</code>.</li>
+    <li><b>Kubernetes</b>: Deployments keep pods alive, Services give them a stable name, probes decide restart versus reroute.</li>
+    <li><b>Service to service</b>: call by DNS name, inject the URL via ConfigMap, set timeouts, map every downstream failure to an honest status.</li>
+    <li><b>Stateless</b> pods are what make all of the above work. State lives in a database.</li>
+  </ul>
+  <h3>Where to go next</h3>
+  <div class="next">
+    <div class="term"><h4>Persistent data</h4><p>Postgres via a managed cloud database or a StatefulSet. Fixes the planned bug.</p></div>
+    <div class="term"><h4>Ingress &amp; TLS</h4><p>One public entry point with HTTPS, routing by path to each service.</p></div>
+    <div class="term"><h4>Helm or Kustomize</h4><p>Template the YAML per environment instead of copying it.</p></div>
+    <div class="term"><h4>Autoscaling</h4><p>HorizontalPodAutoscaler adds menu pods when CPU climbs.</p></div>
+    <div class="term"><h4>Service mesh</h4><p>Istio or Linkerd add retries, mTLS and traffic splitting without code changes.</p></div>
+    <div class="term"><h4>Observability</h4><p>OpenTelemetry traces show one order crossing both services.</p></div>
+  </div>
+  <div class="cues"><div class="cue"><b>Ask</b><div><p>"If order-service also called a payments service, and payments was slow, what should happen to the order?" Good bridge into timeouts, retries and idempotency keys.</p></div></div></div>
+</section>
+
+  </main>
+</div>
+
+<footer>Toy code lives in <code>brewbar/</code>: <code>README.md</code> has every command in order, <code>demo.sh</code> walks the REST examples with pauses.</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" data-manual></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-http.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-graphql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-protobuf.min.js"></script>
+<script>
+(function () {
+  /* ---------------- timeline ---------------- */
+  var SEGMENTS = [
+    { id: "intro",   name: "Why APIs",            m90: 5,  m60: 3 },
+    { id: "rest",    name: "REST fundamentals",   m90: 12, m60: 8, core: true },
+    { id: "params",  name: "Path, query or body", m90: 8,  m60: 5, core: true },
+    { id: "alt",     name: "Alternatives",        m90: 4,  m60: 2 },
+    { id: "fastapi", name: "FastAPI build",       m90: 18, m60: 13, core: true },
+    { id: "docker",  name: "Containers",          m90: 8,  m60: 5 },
+    { id: "k8s",     name: "Kubernetes",          m90: 15, m60: 11, core: true },
+    { id: "s2s",     name: "Service to service",  m90: 12, m60: 8, core: true },
+    { id: "wrap",    name: "Recap & Q&A",         m90: 8,  m60: 5 }
+  ];
+  function fmt(min) { var h = Math.floor(min / 60), m = min % 60; return h + ":" + (m < 10 ? "0" : "") + m; }
+
+  var runbar = document.getElementById("runbar");
+  var toc = document.getElementById("toc");
+  SEGMENTS.forEach(function (s) {
+    var a = document.createElement("a");
+    a.href = "#" + s.id; a.id = "rb-" + s.id;
+    if (s.core) a.className = "core";
+    a.innerHTML = '<span class="t"></span><span class="n"></span>';
+    a.querySelector(".n").textContent = s.name;
+    a.title = s.name;
+    runbar.appendChild(a);
+
+    var li = document.createElement("li");
+    var t = document.createElement("a");
+    t.href = "#" + s.id; t.id = "toc-" + s.id;
+    t.innerHTML = '<span class="t"></span><span></span>';
+    t.lastChild.textContent = s.name;
+    li.appendChild(t); toc.appendChild(li);
+  });
+
+  function apply(len) {
+    var key = len === 60 ? "m60" : "m90", start = 0;
+    SEGMENTS.forEach(function (s) {
+      var dur = s[key], range = fmt(start) + " – " + fmt(start + dur);
+      var bar = document.getElementById("rb-" + s.id);
+      bar.style.setProperty("--min", dur);
+      bar.querySelector(".t").textContent = dur + " min";
+      document.getElementById("toc-" + s.id).querySelector(".t").textContent = fmt(start);
+      var stamp = document.querySelector('[data-time="' + s.id + '"]');
+      if (stamp) stamp.textContent = range + " · " + dur + " min";
+      start += dur;
+    });
+    document.getElementById("axis-mid").textContent = fmt(start / 2);
+    document.getElementById("axis-end").textContent = fmt(start);
+    document.querySelectorAll(".toggle button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(Number(b.dataset.len) === len));
+    });
+    try { localStorage.setItem("session-length", String(len)); } catch (e) {}
+  }
+  var saved = 90;
+  try { saved = Number(localStorage.getItem("session-length")) || 90; } catch (e) {}
+  apply(saved === 60 ? 60 : 90);
+  document.querySelectorAll(".toggle button").forEach(function (b) {
+    b.addEventListener("click", function () { apply(Number(b.dataset.len)); });
+  });
+
+  /* active section in the rail */
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        document.querySelectorAll(".toc a").forEach(function (a) { a.classList.remove("active"); });
+        var link = document.getElementById("toc-" + e.target.id);
+        if (link) link.classList.add("active");
+      });
+    }, { rootMargin: "-30% 0px -60% 0px" });
+    SEGMENTS.forEach(function (s) { var el = document.getElementById(s.id); if (el) io.observe(el); });
+  }
+
+  /* ---------------- verb explorer ---------------- */
+  var POD = "menu-service-7d9f8-x2kqp";
+  var KEY = "X-API-Key: barista-secret";
+  function j(o) { return JSON.stringify(o, null, 2); }
+  var EX = [
+    { m: "GET", label: "/menu?category=espresso", safe: true, idem: true,
+      note: "Read a collection. Query params filter and paginate; they never identify a resource.",
+      req: "GET /menu?category=espresso&limit=2 HTTP/1.1\nHost: localhost:8001\nAccept: application/json",
+      status: "200 OK", headers: ["content-type: application/json"],
+      body: j({ items: [
+        { name: "Espresso", category: "espresso", price_cents: 300, available: true, id: 1, updated_at: "2026-10-05T19:29:57Z" },
+        { name: "Flat White", category: "espresso", price_cents: 450, available: true, id: 2, updated_at: "2026-10-05T19:29:57Z" }
+      ], total: 3, limit: 2, offset: 0 }) },
+    { m: "GET", label: "/menu/2", safe: true, idem: true,
+      note: "Read one resource. The id lives in the path.",
+      req: "GET /menu/2 HTTP/1.1\nHost: localhost:8001",
+      status: "200 OK", headers: ["content-type: application/json"],
+      body: j({ name: "Flat White", category: "espresso", price_cents: 450, available: true, id: 2, updated_at: "2026-10-05T19:29:57Z" }) },
+    { m: "GET", label: "/menu/999", safe: true, idem: true,
+      note: "Asking for something that doesn't exist is the caller's problem: 404.",
+      req: "GET /menu/999 HTTP/1.1\nHost: localhost:8001",
+      status: "404 Not Found", headers: ["content-type: application/json"],
+      body: j({ detail: "Menu item 999 not found" }) },
+    { m: "POST", label: "/menu (no key)", safe: false, idem: false,
+      note: "Writes are guarded by a dependency. No credentials at all: 401.",
+      req: "POST /menu HTTP/1.1\nHost: localhost:8001\nContent-Type: application/json\n\n" + j({ name: "Mocha", category: "espresso", price_cents: 520 }),
+      status: "401 Unauthorized", headers: ["content-type: application/json"],
+      body: j({ detail: "Missing X-API-Key header" }) },
+    { m: "POST", label: "/menu (bad body)", safe: false, idem: false,
+      note: "Pydantic rejects the body before our function runs. We wrote zero validation code for this 422.",
+      req: "POST /menu HTTP/1.1\nHost: localhost:8001\nContent-Type: application/json\n" + KEY + "\n\n" + j({ name: "M", category: "smoothie", price_cents: -5 }),
+      status: "422 Unprocessable Entity", headers: ["content-type: application/json"],
+      body: j({ detail: [
+        { type: "string_too_short", loc: ["body", "name"], msg: "String should have at least 2 characters" },
+        { type: "enum", loc: ["body", "category"], msg: "Input should be 'espresso', 'brew', 'tea' or 'pastry'" },
+        { type: "greater_than", loc: ["body", "price_cents"], msg: "Input should be greater than 0" }
+      ] }) },
+    { m: "POST", label: "/menu", safe: false, idem: false,
+      note: "Create. The server picks the id and says where the new resource lives in the Location header.",
+      req: "POST /menu HTTP/1.1\nHost: localhost:8001\nContent-Type: application/json\n" + KEY + "\n\n" + j({ name: "Mocha", category: "espresso", price_cents: 520 }),
+      status: "201 Created", headers: ["content-type: application/json", "location: /menu/8"],
+      body: j({ name: "Mocha", category: "espresso", price_cents: 520, available: true, id: 8, updated_at: "2026-10-05T19:29:58Z" }) },
+    { m: "POST", label: "/menu (again)", safe: false, idem: false,
+      note: "POST is not idempotent: the same request twice would create two items. We detect the duplicate and answer 409.",
+      req: "POST /menu HTTP/1.1\nHost: localhost:8001\nContent-Type: application/json\n" + KEY + "\n\n" + j({ name: "Mocha", category: "espresso", price_cents: 520 }),
+      status: "409 Conflict", headers: ["content-type: application/json"],
+      body: j({ detail: "'Mocha' is already on the menu" }) },
+    { m: "PUT", label: "/menu/8", safe: false, idem: true,
+      note: "Replace the whole item. Send it ten times, the result is identical: idempotent.",
+      req: "PUT /menu/8 HTTP/1.1\nHost: localhost:8001\nContent-Type: application/json\n" + KEY + "\n\n" + j({ name: "Mocha", category: "espresso", price_cents: 550, available: true }),
+      status: "200 OK", headers: ["content-type: application/json"],
+      body: j({ name: "Mocha", category: "espresso", price_cents: 550, available: true, id: 8, updated_at: "2026-10-05T19:29:58Z" }) },
+    { m: "PATCH", label: "/menu/7", safe: false, idem: false,
+      note: "Change only the fields you send. Everything else on the croissant stays as it was.",
+      req: "PATCH /menu/7 HTTP/1.1\nHost: localhost:8001\nContent-Type: application/json\n" + KEY + "\n\n" + j({ available: false }),
+      status: "200 OK", headers: ["content-type: application/json"],
+      body: j({ name: "Croissant", category: "pastry", price_cents: 350, available: false, id: 7, updated_at: "2026-10-05T19:29:58Z" }) },
+    { m: "DELETE", label: "/menu/8", safe: false, idem: true,
+      note: "Remove it. 204 means success with nothing to say. A second DELETE gets 404, but the server's state is the same.",
+      req: "DELETE /menu/8 HTTP/1.1\nHost: localhost:8001\n" + KEY,
+      status: "204 No Content", headers: [], body: "" }
+  ];
+
+  var tabs = document.getElementById("ex-tabs");
+  EX.forEach(function (ex, i) {
+    var b = document.createElement("button");
+    b.type = "button"; b.id = "ex-tab-" + i;
+    b.setAttribute("role", "tab"); b.setAttribute("aria-controls", "ex-panel");
+    b.innerHTML = '<span class="mth ' + ex.m + '">' + ex.m + '</span><span></span>';
+    b.lastChild.textContent = ex.label;
+    b.addEventListener("click", function () { show(i); });
+    b.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        var n = (i + (e.key === "ArrowRight" ? 1 : EX.length - 1)) % EX.length;
+        show(n); document.getElementById("ex-tab-" + n).focus();
+      }
+    });
+    tabs.appendChild(b);
+  });
+
+  function highlight(el) { if (window.Prism) Prism.highlightElement(el); }
+  function show(i) {
+    var ex = EX[i];
+    tabs.querySelectorAll("button").forEach(function (b, k) {
+      b.setAttribute("aria-selected", String(k === i));
+      b.tabIndex = k === i ? 0 : -1;
+    });
+    document.getElementById("ex-note").textContent = ex.note;
+    document.getElementById("ex-safe").className = "pill" + (ex.safe ? " on" : "");
+    document.getElementById("ex-safe").textContent = ex.safe ? "safe" : "not safe";
+    document.getElementById("ex-idem").className = "pill" + (ex.idem ? " on" : "");
+    document.getElementById("ex-idem").textContent = ex.idem ? "idempotent" : "not idempotent";
+    document.getElementById("ex-status").textContent = ex.status;
+    document.getElementById("ex-curl-label").textContent = ex.m + " " + ex.label.split(" ")[0];
+    var req = document.getElementById("ex-req");
+    req.textContent = ex.req; highlight(req);
+    var res = document.getElementById("ex-res");
+    res.textContent = "HTTP/1.1 " + ex.status + "\n" +
+      ex.headers.concat(["x-served-by: " + POD]).join("\n") +
+      (ex.body ? "\n\n" + ex.body : "");
+    highlight(res);
+  }
+  show(0);
+
+  if (window.Prism) Prism.highlightAll();
+})();
+</script>

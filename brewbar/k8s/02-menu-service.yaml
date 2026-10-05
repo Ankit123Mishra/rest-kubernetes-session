@@ -1,0 +1,60 @@
+# The API key lives in a Secret, not in the image or the YAML of the Deployment.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: menu-api-key
+  namespace: brewbar
+type: Opaque
+stringData:
+  API_KEY: barista-secret
+---
+# A Deployment keeps N identical pods running and replaces any that die.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: menu-service
+  namespace: brewbar
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: menu-service          # "I own pods carrying this label"
+  template:                      # the pod blueprint
+    metadata:
+      labels:
+        app: menu-service
+    spec:
+      containers:
+        - name: menu
+          image: brewbar/menu-service:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: menu-api-key
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits:   { cpu: 250m, memory: 128Mi }
+          livenessProbe:           # fails → container is restarted
+            httpGet: { path: /healthz, port: 8000 }
+            periodSeconds: 10
+          readinessProbe:          # fails → pod removed from the Service, no restart
+            httpGet: { path: /readyz, port: 8000 }
+            periodSeconds: 3
+---
+# A Service gives the pods ONE stable name and IP, and load-balances across them.
+# Other pods reach it at http://menu-service (same namespace)
+# or http://menu-service.brewbar.svc.cluster.local (from anywhere in the cluster).
+apiVersion: v1
+kind: Service
+metadata:
+  name: menu-service
+  namespace: brewbar
+spec:
+  type: ClusterIP                # internal only
+  selector:
+    app: menu-service            # send traffic to pods with this label
+  ports:
+    - port: 80                   # the Service's port
+      targetPort: 8000           # the container's port
